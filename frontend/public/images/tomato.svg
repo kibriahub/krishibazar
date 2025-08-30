@@ -1,0 +1,30 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="tomatoGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="70%" stop-color="#e74c3c"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </radialGradient>
+    <radialGradient id="leafGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#2ecc71"/>
+      <stop offset="100%" stop-color="#27ae60"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Tomato body -->
+  <circle cx="150" cy="170" r="100" fill="url(#tomatoGradient)"/>
+  
+  <!-- Tomato ridges -->
+  <path d="M 80 120 Q 150 140 220 120" stroke="#c0392b" stroke-width="2" fill="none"/>
+  <path d="M 90 140 Q 150 160 210 140" stroke="#c0392b" stroke-width="2" fill="none"/>
+  <path d="M 100 160 Q 150 180 200 160" stroke="#c0392b" stroke-width="2" fill="none"/>
+  
+  <!-- Tomato leaves -->
+  <path d="M 120 80 Q 130 60 140 80 Q 150 60 160 80 Q 170 60 180 80" fill="url(#leafGradient)"/>
+  
+  <!-- Stem -->
+  <rect x="145" y="70" width="10" height="20" fill="#8b4513" rx="2"/>
+  
+  <!-- Highlight -->
+  <ellipse cx="120" cy="140" rx="15" ry="25" fill="#ff9999" opacity="0.6"/>
+</svg>

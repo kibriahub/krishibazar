@@ -1,0 +1,47 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="chickenGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#ffeaa7"/>
+      <stop offset="70%" stop-color="#fdcb6e"/>
+      <stop offset="100%" stop-color="#e17055"/>
+    </radialGradient>
+    <radialGradient id="combGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#e74c3c"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Chicken body -->
+  <ellipse cx="150" cy="180" rx="80" ry="60" fill="url(#chickenGradient)"/>
+  
+  <!-- Chicken head -->
+  <circle cx="150" cy="120" r="40" fill="url(#chickenGradient)"/>
+  
+  <!-- Chicken beak -->
+  <path d="M 110 120 L 90 125 L 110 130 Z" fill="#f39c12"/>
+  
+  <!-- Chicken eye -->
+  <circle cx="135" cy="115" r="5" fill="#2c3e50"/>
+  <circle cx="137" cy="113" r="2" fill="#ffffff"/>
+  
+  <!-- Chicken comb -->
+  <path d="M 130 85 Q 135 75 140 85 Q 145 75 150 85 Q 155 75 160 85 Q 165 75 170 85" fill="url(#combGradient)"/>
+  
+  <!-- Chicken wattle -->
+  <ellipse cx="125" cy="135" rx="8" ry="12" fill="url(#combGradient)"/>
+  
+  <!-- Chicken wing -->
+  <ellipse cx="180" cy="160" rx="25" ry="40" fill="#fdcb6e" transform="rotate(30 180 160)"/>
+  
+  <!-- Chicken tail feathers -->
+  <path d="M 220 150 Q 240 140 235 170 Q 230 180 220 175 Z" fill="#2d3436"/>
+  <path d="M 225 160 Q 245 150 240 180 Q 235 190 225 185 Z" fill="#636e72"/>
+  
+  <!-- Chicken legs -->
+  <rect x="130" y="230" width="8" height="30" fill="#f39c12"/>
+  <rect x="160" y="230" width="8" height="30" fill="#f39c12"/>
+  
+  <!-- Chicken feet -->
+  <path d="M 125 260 L 120 270 M 130 260 L 125 270 M 135 260 L 140 270" stroke="#f39c12" stroke-width="3" fill="none"/>
+  <path d="M 155 260 L 150 270 M 160 260 L 155 270 M 165 260 L 170 270" stroke="#f39c12" stroke-width="3" fill="none"/>
+</svg>

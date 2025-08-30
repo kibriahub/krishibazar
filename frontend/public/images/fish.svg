@@ -1,0 +1,53 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fishGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74b9ff"/>
+      <stop offset="50%" stop-color="#0984e3"/>
+      <stop offset="100%" stop-color="#2d3436"/>
+    </linearGradient>
+    <radialGradient id="finGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" stop-color="#81ecec"/>
+      <stop offset="100%" stop-color="#00b894"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Fish body -->
+  <ellipse cx="150" cy="150" rx="90" ry="45" fill="url(#fishGradient)"/>
+  
+  <!-- Fish head (more pointed) -->
+  <ellipse cx="80" cy="150" rx="30" ry="35" fill="url(#fishGradient)"/>
+  
+  <!-- Fish tail -->
+  <path d="M 240 150 L 280 120 L 270 150 L 280 180 Z" fill="url(#finGradient)"/>
+  
+  <!-- Dorsal fin -->
+  <path d="M 120 105 Q 140 90 160 105 Q 180 90 200 105" fill="url(#finGradient)"/>
+  
+  <!-- Ventral fin -->
+  <path d="M 120 195 Q 140 210 160 195 Q 180 210 200 195" fill="url(#finGradient)"/>
+  
+  <!-- Side fins -->
+  <ellipse cx="110" cy="170" rx="15" ry="25" fill="url(#finGradient)" transform="rotate(45 110 170)"/>
+  <ellipse cx="110" cy="130" rx="15" ry="25" fill="url(#finGradient)" transform="rotate(-45 110 130)"/>
+  
+  <!-- Fish eye -->
+  <circle cx="70" cy="140" r="8" fill="#ffffff"/>
+  <circle cx="70" cy="140" r="5" fill="#2d3436"/>
+  <circle cx="72" cy="138" r="2" fill="#ffffff"/>
+  
+  <!-- Fish mouth -->
+  <path d="M 50 150 Q 45 155 50 160" stroke="#2d3436" stroke-width="2" fill="none"/>
+  
+  <!-- Fish scales pattern -->
+  <g opacity="0.3">
+    <circle cx="100" cy="140" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="120" cy="135" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="140" cy="140" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="160" cy="135" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="180" cy="140" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="110" cy="160" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="130" cy="165" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="150" cy="160" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="170" cy="165" r="8" fill="none" stroke="#ffffff" stroke-width="1"/>
+  </g>
+</svg>

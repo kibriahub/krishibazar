@@ -1,0 +1,39 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="riceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8f9fa"/>
+      <stop offset="50%" stop-color="#e9ecef"/>
+      <stop offset="100%" stop-color="#dee2e6"/>
+    </linearGradient>
+    <linearGradient id="bagGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8d6e63"/>
+      <stop offset="100%" stop-color="#5d4037"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rice bag -->
+  <rect x="80" y="120" width="140" height="160" fill="url(#bagGradient)" rx="10"/>
+  
+  <!-- Bag opening -->
+  <ellipse cx="150" cy="120" rx="70" ry="15" fill="#3e2723"/>
+  
+  <!-- Rice grains spilling -->
+  <ellipse cx="150" cy="115" rx="60" ry="12" fill="url(#riceGradient)"/>
+  
+  <!-- Individual rice grains -->
+  <ellipse cx="130" cy="100" rx="3" ry="8" fill="#f8f9fa" transform="rotate(15 130 100)"/>
+  <ellipse cx="145" cy="95" rx="3" ry="8" fill="#e9ecef" transform="rotate(-10 145 95)"/>
+  <ellipse cx="160" cy="98" rx="3" ry="8" fill="#f8f9fa" transform="rotate(25 160 98)"/>
+  <ellipse cx="175" cy="105" rx="3" ry="8" fill="#dee2e6" transform="rotate(-5 175 105)"/>
+  <ellipse cx="120" cy="110" rx="3" ry="8" fill="#e9ecef" transform="rotate(30 120 110)"/>
+  
+  <!-- More scattered grains -->
+  <ellipse cx="110" cy="120" rx="2" ry="6" fill="#f8f9fa" transform="rotate(45 110 120)"/>
+  <ellipse cx="190" cy="125" rx="2" ry="6" fill="#dee2e6" transform="rotate(-20 190 125)"/>
+  <ellipse cx="105" cy="135" rx="2" ry="6" fill="#e9ecef" transform="rotate(60 105 135)"/>
+  
+  <!-- Bag label -->
+  <rect x="90" y="180" width="120" height="40" fill="#ffffff" opacity="0.9" rx="5"/>
+  <text x="150" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#333">PREMIUM</text>
+  <text x="150" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#666">RICE</text>
+</svg>

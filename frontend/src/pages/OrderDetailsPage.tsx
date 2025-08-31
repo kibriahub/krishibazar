@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ordersApi } from '../services/api';
-import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, CreditCard, Phone, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ordersApi, reviewsApi } from '../services/api';
+import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, CreditCard, Phone, ArrowLeft, AlertTriangle, Star, MessageSquare } from 'lucide-react';
 
 interface OrderItem {
   product: {
@@ -65,6 +65,20 @@ const OrderDetailsPage: React.FC = () => {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedProductForReview, setSelectedProductForReview] = useState<OrderItem | null>(null);
+  const [reviewForm, setReviewForm] = useState({
+    title: '',
+    reviewText: '',
+    rating: 5,
+    criteria: {
+      quality: 5,
+      freshness: 5,
+      packaging: 5,
+      value: 5
+    }
+  });
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -156,6 +170,48 @@ const OrderDetailsPage: React.FC = () => {
 
   const canCancelOrder = (status: string) => {
     return ['pending', 'confirmed'].includes(status);
+  };
+
+  const handleWriteReview = (item: OrderItem) => {
+    setSelectedProductForReview(item);
+    setReviewForm({
+      title: '',
+      reviewText: '',
+      rating: 5,
+      criteria: {
+        quality: 5,
+        freshness: 5,
+        packaging: 5,
+        value: 5
+      }
+    });
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedProductForReview) return;
+    
+    try {
+      setSubmittingReview(true);
+      
+      const reviewData = {
+        ...reviewForm,
+        targetType: 'product' as const,
+        targetId: selectedProductForReview.product._id
+      };
+
+      await reviewsApi.createReview(reviewData);
+      setShowReviewModal(false);
+      setSelectedProductForReview(null);
+      
+      // Show success message
+      alert('Review submitted successfully!');
+    } catch (err: any) {
+      console.error('Error submitting review:', err);
+      alert(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   if (loading) {
@@ -297,6 +353,15 @@ const OrderDetailsPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">৳{item.totalPrice}</p>
+                      {order.status === 'delivered' && (
+                        <button
+                          onClick={() => handleWriteReview(item)}
+                          className="mt-2 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition duration-200 flex items-center space-x-1"
+                        >
+                          <Star className="h-4 w-4" />
+                          <span>Write Review</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -440,6 +505,159 @@ const OrderDetailsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && selectedProductForReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Write Review for {selectedProductForReview.productName}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={reviewForm.title}
+                  onChange={(e) => setReviewForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Brief title for your review"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rating
+                </label>
+                <div className="flex items-center space-x-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                      className={`text-2xl ${
+                        star <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-300'
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Review
+                </label>
+                <textarea
+                  value={reviewForm.reviewText}
+                  onChange={(e) => setReviewForm(prev => ({ ...prev, reviewText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Share your experience with this product..."
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quality
+                  </label>
+                  <select
+                    value={reviewForm.criteria.quality}
+                    onChange={(e) => setReviewForm(prev => ({
+                      ...prev,
+                      criteria: { ...prev.criteria, quality: parseInt(e.target.value) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Freshness
+                  </label>
+                  <select
+                    value={reviewForm.criteria.freshness}
+                    onChange={(e) => setReviewForm(prev => ({
+                      ...prev,
+                      criteria: { ...prev.criteria, freshness: parseInt(e.target.value) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Packaging
+                  </label>
+                  <select
+                    value={reviewForm.criteria.packaging}
+                    onChange={(e) => setReviewForm(prev => ({
+                      ...prev,
+                      criteria: { ...prev.criteria, packaging: parseInt(e.target.value) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Value
+                  </label>
+                  <select
+                    value={reviewForm.criteria.value}
+                    onChange={(e) => setReviewForm(prev => ({
+                      ...prev,
+                      criteria: { ...prev.criteria, value: parseInt(e.target.value) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setSelectedProductForReview(null);
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={submittingReview}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={submittingReview || !reviewForm.title.trim() || !reviewForm.reviewText.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

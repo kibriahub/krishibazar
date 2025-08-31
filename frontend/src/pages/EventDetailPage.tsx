@@ -89,6 +89,8 @@ const EventDetailPage: React.FC = () => {
   const [registering, setRegistering] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cod' | 'online'>('cod');
 
   const fetchEvent = async () => {
     try {
@@ -109,7 +111,7 @@ const EventDetailPage: React.FC = () => {
     }
   }, [eventId]);
 
-  const handleRegister = async () => {
+  const handleRegister = async (paymentMethod?: 'cod' | 'online') => {
     if (!user) {
       navigate('/login');
       return;
@@ -117,13 +119,31 @@ const EventDetailPage: React.FC = () => {
 
     try {
       setRegistering(true);
-      await eventsApi.registerForEvent(eventId!);
+      const registrationData = event?.registrationFee && event.registrationFee > 0 && paymentMethod 
+        ? { paymentMethod } 
+        : {};
+      
+      const response = await eventsApi.registerForEvent(eventId!, registrationData);
       await fetchEvent(); // Refresh event data
-      alert('Successfully registered for the event!');
+      alert(response.message || 'Successfully registered for the event!');
+      setShowPaymentModal(false);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to register for event');
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handleRegisterClick = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (event?.registrationFee && event.registrationFee > 0) {
+      setShowPaymentModal(true);
+    } else {
+      handleRegister();
     }
   };
 
@@ -387,7 +407,7 @@ const EventDetailPage: React.FC = () => {
                 </div>
               ) : canRegister() ? (
                 <button
-                  onClick={handleRegister}
+                  onClick={handleRegisterClick}
                   disabled={registering}
                   className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -484,6 +504,67 @@ const EventDetailPage: React.FC = () => {
                 className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200 disabled:opacity-50"
               >
                 {cancelling ? 'Cancelling...' : 'Cancel Registration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Method Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Payment Method</h3>
+            <p className="text-gray-600 mb-4">
+              Registration fee: <span className="font-semibold text-green-600">৳{event?.registrationFee}</span>
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cod"
+                  checked={selectedPaymentMethod === 'cod'}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value as 'cod')}
+                  className="mr-3"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Cash on Delivery</div>
+                  <div className="text-sm text-gray-600">Pay at the event venue</div>
+                </div>
+              </label>
+              
+              <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 opacity-50">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="online"
+                  checked={selectedPaymentMethod === 'online'}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value as 'online')}
+                  className="mr-3"
+                  disabled
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Online Payment</div>
+                  <div className="text-sm text-gray-600">Coming soon</div>
+                </div>
+              </label>
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRegister(selectedPaymentMethod)}
+                disabled={registering}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50"
+              >
+                {registering ? 'Registering...' : 'Confirm Registration'}
               </button>
             </div>
           </div>

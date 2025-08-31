@@ -89,9 +89,10 @@ const CheckoutPage: React.FC = () => {
           quantity: item.quantity
         })),
         deliveryAddress,
-        paymentMethod: paymentMethod.type,
+        paymentMethod: paymentMethod.type === 'cash' ? 'cash_on_delivery' : 'mobile_banking',
         paymentDetails: paymentMethod.type !== 'cash' ? {
-          mobileNumber: paymentMethod.details
+          mobileNumber: paymentMethod.details,
+          paymentProvider: paymentMethod.type
         } : {}
       };
       

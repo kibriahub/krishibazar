@@ -93,7 +93,35 @@ const orderSchema = new mongoose.Schema({
   paymentDetails: {
     mobileNumber: String,
     transactionId: String,
-    cardLast4: String
+    cardLast4: String,
+    paymentProvider: String, // bkash, nagad, etc.
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
+      default: 'pending'
+    },
+    // COD Payment Approval Workflow
+    codApproval: {
+      vendorApproved: {
+        type: Boolean,
+        default: false
+      },
+      vendorApprovedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      vendorApprovedAt: Date,
+      adminApproved: {
+        type: Boolean,
+        default: false
+      },
+      adminApprovedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      adminApprovedAt: Date,
+      rejectionReason: String
+    }
   },
   orderSummary: {
     subtotal: {
@@ -107,6 +135,16 @@ const orderSchema = new mongoose.Schema({
       min: 0,
       default: 50
     },
+    tax: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    discount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     total: {
       type: Number,
       required: true,
@@ -115,19 +153,23 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'],
+    enum: ['pending', 'confirmed', 'preparing', 'packed', 'out_for_delivery', 'delivered', 'cancelled', 'returned'],
     default: 'pending'
   },
   statusHistory: [{
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled']
+      enum: ['pending', 'confirmed', 'preparing', 'packed', 'out_for_delivery', 'delivered', 'cancelled', 'returned']
     },
     timestamp: {
       type: Date,
       default: Date.now
     },
-    note: String
+    note: String,
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
   }],
   estimatedDelivery: {
     type: Date
@@ -135,9 +177,41 @@ const orderSchema = new mongoose.Schema({
   actualDelivery: {
     type: Date
   },
+  deliveryTracking: {
+    trackingNumber: String,
+    carrier: String,
+    trackingUrl: String
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'normal', 'high', 'urgent'],
+    default: 'normal'
+  },
+  specialInstructions: {
+    type: String,
+    trim: true
+  },
   notes: {
     type: String,
     trim: true
+  },
+  cancellationReason: {
+    type: String,
+    trim: true
+  },
+  refundStatus: {
+    type: String,
+    enum: ['none', 'requested', 'processing', 'completed', 'rejected'],
+    default: 'none'
+  },
+  customerRating: {
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5
+    },
+    review: String,
+    reviewDate: Date
   }
 }, {
   timestamps: true

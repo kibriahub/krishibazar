@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Direct API Test</h1>
+    
+    <button onclick="testAuth()">Test Auth</button>
+    <button onclick="testReviewEndpoint()">Test Review Endpoint</button>
+    <button onclick="testReviewSubmission()">Test Review Submission</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/v1';
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function testAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'no-token'}`
+                    }
+                });
+                
+                const data = await response.json();
+                addResult(`Auth test: ${response.status} - ${JSON.stringify(data)}`, !response.ok);
+            } catch (error) {
+                addResult(`Auth test error: ${error.message}`, true);
+            }
+        }
+        
+        async function testReviewEndpoint() {
+            try {
+                const response = await fetch(`${API_BASE}/reviews/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'no-token'}`
+                    },
+                    body: JSON.stringify({ test: 'data' })
+                });
+                
+                const data = await response.json();
+                addResult(`Test endpoint: ${response.status} - ${JSON.stringify(data)}`, !response.ok);
+            } catch (error) {
+                addResult(`Test endpoint error: ${error.message}`, true);
+            }
+        }
+        
+        async function testReviewSubmission() {
+            try {
+                const reviewData = {
+                    productId: 'PROD-1756570380068-4HXO9LOE7',
+                    rating: 5,
+                    comment: 'Direct API test review'
+                };
+                
+                const response = await fetch(`${API_BASE}/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token') || 'no-token'}`
+                    },
+                    body: JSON.stringify(reviewData)
+                });
+                
+                const data = await response.json();
+                addResult(`Review submission: ${response.status} - ${JSON.stringify(data)}`, !response.ok);
+            } catch (error) {
+                addResult(`Review submission error: ${error.message}`, true);
+            }
+        }
+        
+        // Show token info on load
+        window.onload = function() {
+            const token = localStorage.getItem('token');
+            addResult(`Token status: ${token ? 'Present (' + token.substring(0, 20) + '...)' : 'Not found'}`);
+        }
+    </script>
+</body>
+</html>

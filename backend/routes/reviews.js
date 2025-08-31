@@ -11,7 +11,8 @@ const {
   addResponse,
   getUserReviews,
   moderateReview,
-  getReviewStats
+  getReviewStats,
+  getReviewableProducts
 } = require('../controllers/reviews');
 
 const router = express.Router();
@@ -27,7 +28,16 @@ router.route('/user/:userId').get(getUserReviews);
 // Protected routes - All authenticated users
 router.use(protect);
 
+// Test route to debug authentication
+router.route('/test').post((req, res) => {
+  console.log('TEST ROUTE: Request received');
+  console.log('TEST ROUTE: User:', req.user);
+  console.log('TEST ROUTE: Body:', req.body);
+  res.json({ message: 'Test route working', user: req.user });
+});
+
 router.route('/').post(createReview);
+router.route('/reviewable-products').get(getReviewableProducts);
 router.route('/:id').put(updateReview).delete(deleteReview);
 router.route('/:id/vote').post(voteOnReview);
 router.route('/:id/flag').post(flagReview);

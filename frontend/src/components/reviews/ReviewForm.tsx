@@ -78,18 +78,24 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('ReviewForm: Form submitted');
+    console.log('ReviewForm: User:', user);
+    console.log('ReviewForm: Form data:', formData);
     
     if (!user) {
+      console.log('ReviewForm: No user logged in');
       setError('You must be logged in to submit a review');
       return;
     }
     
     if (formData.rating === 0) {
+      console.log('ReviewForm: No rating selected');
       setError('Please select a rating');
       return;
     }
     
     if (!formData.title.trim() || !formData.reviewText.trim()) {
+      console.log('ReviewForm: Missing title or review text');
       setError('Please fill in all required fields');
       return;
     }
@@ -99,19 +105,27 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       setError('');
       
       const reviewData = {
-        ...formData,
+        title: formData.title,
+        text: formData.reviewText,
+        rating: formData.rating,
+        images: formData.images,
         reviewType,
-        targetId,
-        orderId,
+        reviewTarget: targetId,
+        context: {
+          orderId: orderId
+        },
         criteria: reviewType === 'product' ? criteria : undefined
       };
       
+      console.log('ReviewForm: About to call API with data:', reviewData);
       await reviewsApi.createReview(reviewData);
+      console.log('ReviewForm: API call successful');
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
+      console.log('ReviewForm: API call failed:', err);
       setError(err.response?.data?.message || 'Failed to submit review');
     } finally {
       setLoading(false);

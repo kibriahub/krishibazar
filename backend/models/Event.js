@@ -139,6 +139,11 @@ const eventSchema = new mongoose.Schema({
       type: String,
       enum: ['pending', 'paid', 'refunded'],
       default: 'pending'
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['free', 'cod', 'online'],
+      default: 'free'
     }
   }],
   vendors: [{
@@ -174,6 +179,15 @@ const eventSchema = new mongoose.Schema({
   totalReviews: {
     type: Number,
     default: 0
+  },
+  // Notification tracking fields
+  reminderSent: {
+    type: Boolean,
+    default: false
+  },
+  completionNotificationSent: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

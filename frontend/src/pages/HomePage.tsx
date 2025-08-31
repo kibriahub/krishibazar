@@ -132,7 +132,7 @@ const HomePage: React.FC = () => {
                   <div className="h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
                     {product.images && product.images[0] && product.images[0] !== 'no-photo.jpg' ? (
                       <img 
-                        src={`/images/${product.images[0]}`} 
+                        src={`http://localhost:5000${product.images[0]}`} 
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const User = require('../models/User');
+const { sendEventNotification } = require('./notifications');
 
 // Create a new event (admin only)
 const createEvent = async (req, res) => {
@@ -18,9 +19,9 @@ const createEvent = async (req, res) => {
       contactInfo
     } = req.body;
 
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    // Check if user has permission to create events (admin, farmer, or vendor)
+    if (!['admin', 'farmer', 'vendor'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Only admins, farmers, and vendors can create events.' });
     }
 
     // Validate required fields
@@ -50,6 +51,7 @@ const createEvent = async (req, res) => {
       organizer: req.user.id,
       capacity,
       registrationFee: registrationFee || 0,
+      status: req.body.status || 'published', // Default to published for visibility
       images: images || [],
       tags: tags || [],
       requirements,
@@ -58,6 +60,21 @@ const createEvent = async (req, res) => {
 
     await event.save();
     await event.populate('organizer', 'name email');
+
+    // Send event announcement notification
+    try {
+      await sendEventNotification('event_announced', event._id, {
+        eventTitle: event.title,
+        eventId: event._id,
+        startDate: event.dateTime.startDate,
+        location: `${event.location.city}, ${event.location.state}`,
+        actionUrl: `/events/${event._id}`,
+        imageUrl: event.images && event.images.length > 0 ? event.images[0] : null
+      });
+    } catch (notificationError) {
+      console.error('Failed to send event announcement notification:', notificationError);
+      // Don't fail event creation if notification fails
+    }
 
     res.status(201).json({
       message: 'Event created successfully',
@@ -194,6 +211,20 @@ const updateEvent = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('organizer', 'name email');
 
+    // Send event completion notification if status changed to completed
+    if (updateData.status === 'completed' && event.status !== 'completed') {
+      try {
+        await sendEventNotification('event_completed', updatedEvent._id, {
+          eventTitle: updatedEvent.title,
+          eventId: updatedEvent._id,
+          actionUrl: `/events/${updatedEvent._id}`,
+          imageUrl: updatedEvent.images && updatedEvent.images.length > 0 ? updatedEvent.images[0] : null
+        });
+      } catch (notificationError) {
+        console.error('Failed to send event completion notification:', notificationError);
+      }
+    }
+
     res.json({
       message: 'Event updated successfully',
       event: updatedEvent
@@ -241,6 +272,7 @@ const deleteEvent = async (req, res) => {
 const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { paymentMethod } = req.body; // 'online' or 'cod' (Cash on Delivery)
     const userId = req.user.id;
 
     const event = await Event.findById(eventId);
@@ -270,17 +302,32 @@ const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: 'You are already registered for this event' });
     }
 
+    // Determine payment status based on fee and payment method
+    let paymentStatus = 'paid'; // Default for free events
+    if (event.registrationFee > 0) {
+      if (paymentMethod === 'cod') {
+        paymentStatus = 'paid'; // COD is considered successful payment
+      } else {
+        paymentStatus = 'pending'; // Online payment needs processing
+      }
+    }
+
     // Add user to attendees
     event.attendees.push({
       user: userId,
-      paymentStatus: event.registrationFee > 0 ? 'pending' : 'paid'
+      paymentStatus,
+      paymentMethod: event.registrationFee > 0 ? (paymentMethod || 'cod') : 'free'
     });
 
     await event.save();
     await event.populate('attendees.user', 'name email');
 
+    const successMessage = event.registrationFee > 0 && paymentMethod === 'cod' 
+      ? 'Successfully registered! Payment will be collected on delivery/at the event.'
+      : 'Successfully registered for the event!';
+
     res.json({
-      message: 'Successfully registered for the event',
+      message: successMessage,
       registration: event.attendees[event.attendees.length - 1]
     });
 

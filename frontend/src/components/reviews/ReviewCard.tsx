@@ -59,8 +59,8 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   const [error, setError] = useState('');
 
   const isOwner = user?._id === review.user._id;
-  const hasVoted = user && review.helpfulVotes.includes(user._id);
-  const isFlagged = review.flags.length > 0;
+  const hasVoted = user && review.helpfulVotes?.includes(user._id);
+  const isFlagged = review.flags?.length > 0;
 
   const handleVote = async () => {
     if (!user) return;
@@ -299,7 +299,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <ThumbsUp className="w-4 h-4" />
-            <span>Helpful ({review.helpfulVotes.length})</span>
+            <span>Helpful ({review.helpfulVotes?.length || 0})</span>
           </button>
           
           {user && !isOwner && (

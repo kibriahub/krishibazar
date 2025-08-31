@@ -8,7 +8,7 @@ interface CartItem {
   quantity: number;
   maxQuantity: number;
   images?: string[];
-  seller: string;
+  seller: { name: string; };
   sellerType: string;
 }
 

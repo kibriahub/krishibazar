@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { ShoppingCart, Package, Calendar, Settings } from 'lucide-react';
+import { ShoppingCart, Package, Calendar, Settings, RefreshCw } from 'lucide-react';
+import NotificationDropdown from '../NotificationDropdown';
 
 const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -50,13 +51,17 @@ const Navbar: React.FC = () => {
                   <Calendar className="h-4 w-4" />
                   <span>My Events</span>
                 </Link>
+
               </>
             )}
             {user?.role === 'admin' && (
-              <Link to="/admin/events" className="text-white hover:text-green-200 transition duration-300 flex items-center space-x-1">
-                <Settings className="h-4 w-4" />
-                <span>Manage Events</span>
-              </Link>
+              <>
+                <Link to="/admin/events" className="text-white hover:text-green-200 transition duration-300 flex items-center space-x-1">
+                  <Settings className="h-4 w-4" />
+                  <span>Manage Events</span>
+                </Link>
+
+              </>
             )}
             <Link to="/about" className="text-white hover:text-green-200 transition duration-300">About</Link>
             <Link to="/contact" className="text-white hover:text-green-200 transition duration-300">Contact</Link>
@@ -75,6 +80,11 @@ const Navbar: React.FC = () => {
                 </span>
               )}
             </Link>
+            
+            {/* Notifications - only show for authenticated users */}
+            {isAuthenticated && user && (
+              <NotificationDropdown className="text-white" />
+            )}
             
             {isAuthenticated && user ? (
               <div className="relative" ref={dropdownRef}>
@@ -96,23 +106,55 @@ const Navbar: React.FC = () => {
                     >
                       Profile
                     </Link>
+                    {user.role === 'consumer' && (
+                      <>
+                        <Link 
+                          to="/consumer-dashboard" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link 
+                          to="/my-reviews" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          My Reviews
+                        </Link>
+
+                      </>
+                    )}
                     {(user.role === 'farmer' || user.role === 'vendor') && (
-                      <Link 
-                        to="/dashboard" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setDropdownOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
+                      <>
+                        <Link 
+                          to="/dashboard" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link 
+                          to="/my-products" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          My Products
+                        </Link>
+
+                      </>
                     )}
                     {user.role === 'admin' && (
-                      <Link 
-                        to="/admin" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setDropdownOpen(false)}
-                      >
-                        Admin Panel
-                      </Link>
+                      <>
+                        <Link 
+                          to="/admin" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Admin Panel
+                        </Link>
+
+                      </>
                     )}
                     <button
                       onClick={handleLogout}

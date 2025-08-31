@@ -106,7 +106,11 @@ exports.getReviews = async (req, res, next) => {
 // @access  Public
 exports.getTargetReviews = async (req, res, next) => {
   try {
+    console.log('=== BACKEND getTargetReviews DEBUG START ===');
     const { reviewType, targetId } = req.params;
+    console.log('Request params:', { reviewType, targetId });
+    console.log('Request query:', req.query);
+    
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const startIndex = (page - 1) * limit;
@@ -131,7 +135,9 @@ exports.getTargetReviews = async (req, res, next) => {
       query['context.verified'] = true;
     }
 
+    console.log('Query object:', query);
     const total = await Review.countDocuments(query);
+    console.log('Total reviews found:', total);
     
     const reviews = await Review.find(query)
       .sort(sortBy)
@@ -146,9 +152,14 @@ exports.getTargetReviews = async (req, res, next) => {
         select: 'name role'
       });
 
+    console.log('Reviews retrieved:', reviews.length);
+    console.log('First review (if any):', reviews[0] ? reviews[0].title : 'No reviews');
+
     // Get rating statistics
     const stats = await Review.getAverageRating(reviewType, targetId);
     const criteriaStats = await Review.getCriteriaAverages(reviewType, targetId);
+    console.log('Stats:', stats);
+    console.log('Criteria stats:', criteriaStats);
 
     // Pagination result
     const pagination = {};
@@ -168,7 +179,7 @@ exports.getTargetReviews = async (req, res, next) => {
       };
     }
 
-    res.status(200).json({
+    const responseData = {
       success: true,
       count: reviews.length,
       total,
@@ -178,7 +189,19 @@ exports.getTargetReviews = async (req, res, next) => {
         criteria: criteriaStats
       },
       data: reviews
+    };
+    
+    console.log('Response data structure:', {
+      success: responseData.success,
+      count: responseData.count,
+      total: responseData.total,
+      hasStats: !!responseData.stats,
+      hasData: !!responseData.data,
+      dataLength: responseData.data.length
     });
+    console.log('=== BACKEND getTargetReviews DEBUG END ===');
+    
+    res.status(200).json(responseData);
   } catch (err) {
     res.status(400).json({
       success: false,
@@ -225,10 +248,24 @@ exports.getReview = async (req, res, next) => {
 // @route   POST /api/v1/reviews
 // @access  Private
 exports.createReview = async (req, res, next) => {
+  console.log('\n*** CREATEREVIEW FUNCTION CALLED ***');
   try {
+    console.log('\n\n=== CREATE REVIEW FUNCTION CALLED ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID:', req.user.id);
+    console.log('User object:', req.user);
+    
     req.body.user = req.user.id;
 
+    // Map targetId to reviewTarget for compatibility
+    if (req.body.targetId && !req.body.reviewTarget) {
+      req.body.reviewTarget = req.body.targetId;
+    }
+
     const { reviewType, reviewTarget } = req.body;
+    console.log('Review type:', reviewType);
+    console.log('Review target:', reviewTarget);
 
     // Verify the target exists
     let targetExists = false;
@@ -290,19 +327,31 @@ exports.createReview = async (req, res, next) => {
       }
     }
 
+    console.log('Creating review with data:', JSON.stringify(req.body, null, 2));
     const review = await Review.create(req.body);
+    console.log('Review created successfully:', review._id);
 
     // Populate user information before sending response
-    await review.populate({
-      path: 'user',
-      select: 'name role'
-    });
+    try {
+      await review.populate({
+        path: 'user',
+        select: 'name role'
+      });
+      console.log('Review populated successfully');
+    } catch (populateErr) {
+      console.log('Populate error (non-critical):', populateErr.message);
+      // Continue without populate if it fails
+    }
 
+    console.log('Review ready to send');
     res.status(201).json({
       success: true,
       data: review
     });
   } catch (err) {
+    console.log('=== CREATE REVIEW ERROR ===');
+    console.log('Error message:', err.message);
+    console.log('Error stack:', err.stack);
     res.status(400).json({
       success: false,
       error: err.message
@@ -662,6 +711,82 @@ exports.moderateReview = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: review
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
+
+// @desc    Get reviewable products for user (from completed orders)
+// @route   GET /api/v1/reviews/reviewable-products
+// @access  Private
+exports.getReviewableProducts = async (req, res, next) => {
+  try {
+    // Get delivered orders for the user
+    const orders = await Order.find({
+      user: req.user.id,
+      status: 'delivered'
+    }).populate('items.product', 'name images price seller');
+
+    if (!orders.length) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Get all products from delivered orders
+    const productIds = [];
+    const productOrderMap = {};
+    
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.product) {
+          productIds.push(item.product._id.toString());
+          productOrderMap[item.product._id.toString()] = {
+            orderId: order._id,
+            orderDate: order.createdAt,
+            deliveryDate: order.actualDelivery || order.updatedAt
+          };
+        }
+      });
+    });
+
+    // Remove duplicates
+    const uniqueProductIds = [...new Set(productIds)];
+
+    // Get existing reviews for these products by this user
+    const existingReviews = await Review.find({
+      user: req.user.id,
+      reviewType: 'product',
+      reviewTarget: { $in: uniqueProductIds }
+    }).select('reviewTarget');
+
+    const reviewedProductIds = existingReviews.map(review => review.reviewTarget.toString());
+
+    // Filter out already reviewed products
+    const reviewableProductIds = uniqueProductIds.filter(
+      productId => !reviewedProductIds.includes(productId)
+    );
+
+    // Get product details for reviewable products
+    const reviewableProducts = await Product.find({
+      _id: { $in: reviewableProductIds }
+    }).populate('seller', 'name businessName');
+
+    // Add order context to each product
+    const productsWithContext = reviewableProducts.map(product => ({
+      ...product.toObject(),
+      orderContext: productOrderMap[product._id.toString()]
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: productsWithContext.length,
+      data: productsWithContext
     });
   } catch (err) {
     res.status(400).json({

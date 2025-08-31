@@ -46,6 +46,12 @@ interface Product {
   description: string;
   price: number;
   unit: string;
+  seller?: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
   sellerType: string;
   location: string;
   category: string;
@@ -103,11 +109,47 @@ const ProductDetailPage: React.FC = () => {
       
       try {
         setReviewsLoading(true);
+        console.log('=== REVIEWS DEBUG START ===');
+        console.log('Product ID:', id);
+        console.log('Active Tab:', activeTab);
+        console.log('Calling reviewsApi.getTargetReviews with:', 'product', id);
+        
         const response = await reviewsApi.getTargetReviews('product', id);
-        setReviews(response.data.reviews);
-        setReviewStats(response.data.stats);
-      } catch (err) {
-        console.error('Error fetching reviews:', err);
+        
+        console.log('=== API RESPONSE DEBUG ===');
+        console.log('Full response object:', response);
+        console.log('Response type:', typeof response);
+        console.log('Response keys:', Object.keys(response || {}));
+        console.log('response.data:', response?.data);
+        console.log('response.stats:', response?.stats);
+        console.log('response.success:', response?.success);
+        
+        if (response && response.success) {
+          console.log('Setting reviews to:', response.data);
+          console.log('Reviews array length:', Array.isArray(response.data) ? response.data.length : 'Not an array');
+          setReviews(response.data || []);
+          console.log('Successfully set reviews:', response.data?.length || 0, 'reviews');
+        } else {
+          console.log('No data in response or success false, setting empty array');
+          setReviews([]);
+        }
+        
+        if (response && response.stats) {
+          console.log('Setting stats to:', response.stats);
+          setReviewStats(response.stats);
+          console.log('Successfully set stats:', response.stats);
+        } else {
+          console.log('No stats in response');
+          setReviewStats(null);
+        }
+        
+        console.log('=== REVIEWS DEBUG END ===');
+      } catch (err: any) {
+        console.error('=== ERROR FETCHING REVIEWS ===');
+        console.error('Error object:', err);
+        console.error('Error message:', err?.message);
+        console.error('Error response:', err?.response);
+        setReviews([]);
       } finally {
         setReviewsLoading(false);
       }
@@ -118,21 +160,29 @@ const ProductDetailPage: React.FC = () => {
 
   const handleReviewSuccess = () => {
     setShowReviewForm(false);
-    // Refresh reviews
-    if (id && activeTab === 'reviews') {
+    // Always refresh reviews after submission
+    if (id) {
       reviewsApi.getTargetReviews('product', id).then(response => {
-        setReviews(response.data.reviews);
-        setReviewStats(response.data.stats);
+        console.log('handleReviewSuccess called with:', response);
+        if (response && response.success) {
+          setReviews(response.data || []);
+          setReviewStats(response.stats || {});
+          console.log('Updated reviews after new review:', response.data?.length || 0);
+        }
       });
     }
   };
 
   const handleReviewUpdate = () => {
-    // Refresh reviews
-    if (id && activeTab === 'reviews') {
+    // Always refresh reviews after update
+    if (id) {
       reviewsApi.getTargetReviews('product', id).then(response => {
-        setReviews(response.data.reviews);
-        setReviewStats(response.data.stats);
+        console.log('handleReviewUpdate called with:', response);
+        if (response && response.success) {
+          setReviews(response.data || []);
+          setReviewStats(response.stats || {});
+          console.log('Updated reviews after review update:', response.data?.length || 0);
+        }
       });
     }
   };
@@ -163,7 +213,7 @@ const ProductDetailPage: React.FC = () => {
       quantity: quantity,
       maxQuantity: product.quantity,
       images: product.images,
-      seller: 'Unknown', // Could be enhanced with seller info
+      seller: { name: product.seller?.name || 'Unknown' },
       sellerType: product.sellerType
     };
     
@@ -228,7 +278,7 @@ const ProductDetailPage: React.FC = () => {
             <div className="mb-4 h-80 bg-gray-200 rounded-lg flex items-center justify-center">
               {product.images && product.images.length > 0 ? (
                 <img 
-                  src={`/images/${product.images[activeImageIndex]}`} 
+                  src={`http://localhost:5000${product.images[activeImageIndex]}`} 
                   alt={product.name} 
                   className="h-full w-full object-cover"
                   onError={(e) => {
@@ -252,7 +302,7 @@ const ProductDetailPage: React.FC = () => {
                     className={`w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center ${index === activeImageIndex ? 'ring-2 ring-green-500' : ''}`}
                   >
                     <img 
-                      src={`/images/${image}`} 
+                      src={`http://localhost:5000${image}`} 
                       alt={`Thumbnail ${index + 1}`} 
                       className="h-full w-full object-cover rounded-md"
                       onError={(e) => {
@@ -286,6 +336,12 @@ const ProductDetailPage: React.FC = () => {
                 <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">Seasonal</span>
               )}
               <span className="text-gray-500 text-sm">{product.category}</span>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-600 text-sm">
+                <span className="font-medium">Sold by:</span> {product.seller?.name || 'Unknown Seller'}
+              </p>
             </div>
 
             <div className="text-2xl font-bold text-green-600 mb-4">
@@ -456,7 +512,7 @@ const ProductDetailPage: React.FC = () => {
 
                     {/* Reviews List */}
                     <div className="space-y-4">
-                      {reviews.length > 0 ? (
+                      {(Array.isArray(reviews) && reviews.length > 0) ? (
                         reviews.map((review) => (
                           <ReviewCard
                             key={review._id}

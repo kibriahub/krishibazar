@@ -37,6 +37,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Address cannot be longer than 200 characters']
   },
+  city: {
+    type: String,
+    required: [true, 'Please add a city'],
+    trim: true,
+    maxlength: [50, 'City name cannot be more than 50 characters'],
+    default: 'Dhaka'
+  },
   role: {
     type: String,
     enum: ['consumer', 'farmer', 'vendor', 'admin'],
@@ -69,6 +76,88 @@ const UserSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  // Email verification fields
+  isEmailVerified: {
+    type: Boolean,
+    default: true // Default to true for existing users compatibility
+  },
+  emailVerificationToken: String,
+  emailVerificationExpire: Date,
+  // Admin management fields
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended', 'pending', 'deleted'],
+    default: 'active'
+  },
+  suspensionReason: String,
+  suspendedAt: Date,
+  suspendedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  roleUpdatedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  roleUpdatedAt: Date,
+  deletedAt: Date,
+  deletedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  deletionReason: String,
+  
+  // Vendor-specific fields
+  vendorInfo: {
+    businessName: String,
+    businessType: String,
+    businessAddress: String,
+    businessPhone: String,
+    businessEmail: String,
+    taxId: String,
+    documents: [{
+      type: {
+        type: String,
+        enum: ['business_license', 'tax_certificate', 'identity_proof', 'address_proof', 'other']
+      },
+      url: String,
+      filename: String,
+      status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      },
+      reviewedBy: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+      },
+      reviewedAt: Date,
+      rejectionReason: String
+    }],
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    approvedBy: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'User'
+    },
+    approvedAt: Date,
+    approvalNotes: String,
+    rejectedBy: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'User'
+    },
+    rejectedAt: Date,
+    rejectionReason: String,
+    rejectionNotes: String
+  },
+  
   createdAt: {
     type: Date,
     default: Date.now

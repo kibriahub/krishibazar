@@ -10,7 +10,9 @@ type ProductCardProps = {
     description: string;
     price: number;
     unit: string;
-    seller: string;
+    seller: {
+      name: string;
+    };
     location: string;
     isOrganic?: boolean;
     isSeasonal?: boolean;
@@ -61,7 +63,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="h-48 bg-gray-200 flex items-center justify-center relative">
         {product.images && product.images.length > 0 ? (
           <img
-            src={`/images/${product.images[0]}`}
+            src={`http://localhost:5000${product.images[0]}`}
             alt={product.name}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -97,7 +99,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
         <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
         <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-          <span>Seller: {product.seller}</span>
+          <span>Seller: {product.seller?.name || 'Unknown'}</span>
           <span>{product.location}</span>
         </div>
         

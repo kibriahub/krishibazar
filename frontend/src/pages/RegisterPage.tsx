@@ -11,6 +11,7 @@ const RegisterPage: React.FC = () => {
     role: 'consumer',
     phone: '',
     address: '',
+    city: 'Dhaka',
     businessName: '',
     businessDescription: ''
   });
@@ -255,6 +256,22 @@ const RegisterPage: React.FC = () => {
               placeholder="Enter your address"
               value={formData.address}
               onChange={handleChange}
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="city">
+              City (Password Hint)
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="city"
+              type="text"
+              name="city"
+              placeholder="Enter your city (used for password recovery)"
+              value={formData.city}
+              onChange={handleChange}
+              required
             />
           </div>
           

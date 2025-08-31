@@ -194,8 +194,8 @@ const ProductsPage: React.FC = () => {
                 <div className="h-48 bg-gray-200 flex items-center justify-center">
                   {product.images && product.images.length > 0 ? (
                     <img 
-                      src={`/images/${product.images[0]}`} 
-                      alt={product.name} 
+                      src={`http://localhost:5000${product.images[0]}`}
+                      alt={product.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { eventsApi } from '../services/api';
+import { eventsApi, adminEventsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus,
@@ -12,7 +12,11 @@ import {
   DollarSign,
   Search,
   Filter,
-  X
+  X,
+  Check,
+  XCircle,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 interface Event {
@@ -86,6 +90,7 @@ interface EventFormData {
 const AdminEventsPage: React.FC = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
+  const [pendingEvents, setPendingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -95,6 +100,12 @@ const AdminEventsPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
@@ -114,7 +125,7 @@ const AdminEventsPage: React.FC = () => {
       maxAttendees: 50
     },
     registrationFee: 0,
-    status: 'active',
+    status: 'published',
     images: [],
     tags: [],
     requirements: [],
@@ -134,9 +145,17 @@ const AdminEventsPage: React.FC = () => {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         eventType: typeFilter !== 'all' ? typeFilter : undefined
       };
-      const response = await eventsApi.getEvents(params);
-      setEvents(response.events);
-      setTotalPages(response.totalPages);
+      
+      if (activeTab === 'pending') {
+        const response = await adminEventsApi.getEventsPendingApproval(params);
+        setPendingEvents(response.events);
+        setTotalPages(response.totalPages);
+      } else {
+        const response = await adminEventsApi.getAllEvents(params);
+        setEvents(response.events);
+        setTotalPages(response.totalPages);
+      }
+      
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch events');
@@ -145,16 +164,95 @@ const AdminEventsPage: React.FC = () => {
     }
   };
 
+  const fetchPendingEvents = async () => {
+    try {
+      const response = await adminEventsApi.getEventsPendingApproval();
+      setPendingEvents(response.events);
+    } catch (err: any) {
+      console.error('Error fetching pending events:', err);
+    }
+  };
+
+  const handleApproveEvent = async (eventId: string, notes?: string) => {
+    try {
+      await adminEventsApi.approveEvent(eventId, { notes });
+      fetchEvents();
+      fetchPendingEvents();
+      setShowApprovalModal(false);
+      resetApprovalModal();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to approve event');
+    }
+  };
+
+  const handleRejectEvent = async (eventId: string, reason: string, notes?: string) => {
+    try {
+      await adminEventsApi.rejectEvent(eventId, { reason, notes });
+      fetchEvents();
+      fetchPendingEvents();
+      setShowApprovalModal(false);
+      resetApprovalModal();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to reject event');
+    }
+  };
+
+  const handleSuspendEvent = async (eventId: string, reason: string, notes?: string) => {
+    try {
+      await adminEventsApi.suspendEvent(eventId, { reason, notes });
+      fetchEvents();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to suspend event');
+    }
+  };
+
+  const openApprovalModal = (event: Event, action: 'approve' | 'reject') => {
+    setSelectedEvent(event);
+    setApprovalAction(action);
+    setShowApprovalModal(true);
+  };
+
+  const resetApprovalModal = () => {
+    setSelectedEvent(null);
+    setApprovalAction(null);
+    setApprovalNotes('');
+    setRejectionReason('');
+  };
+
+  const handleApprovalSubmit = async () => {
+    if (!selectedEvent || !approvalAction) return;
+
+    if (approvalAction === 'approve') {
+      await handleApproveEvent(selectedEvent._id, approvalNotes);
+    } else {
+      await handleRejectEvent(selectedEvent._id, rejectionReason, approvalNotes);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'admin') {
       fetchEvents();
+      if (activeTab === 'all') {
+        fetchPendingEvents();
+      }
     }
-  }, [user, currentPage, searchTerm, statusFilter, typeFilter]);
+  }, [user, currentPage, searchTerm, statusFilter, typeFilter, activeTab]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await eventsApi.createEvent(formData);
+      // Convert requirements array to string for backend compatibility
+      const eventData = {
+        ...formData,
+        requirements: Array.isArray(formData.requirements) 
+          ? formData.requirements.join(', ') 
+          : formData.requirements
+      };
+      await eventsApi.createEvent(eventData);
       setShowCreateForm(false);
       resetForm();
       fetchEvents();
@@ -168,7 +266,14 @@ const AdminEventsPage: React.FC = () => {
     if (!editingEvent) return;
     
     try {
-      await eventsApi.updateEvent(editingEvent._id, formData);
+      // Convert requirements array to string for backend compatibility
+      const eventData = {
+        ...formData,
+        requirements: Array.isArray(formData.requirements) 
+          ? formData.requirements.join(', ') 
+          : formData.requirements
+      };
+      await eventsApi.updateEvent(editingEvent._id, eventData);
       setEditingEvent(null);
       resetForm();
       fetchEvents();
@@ -207,7 +312,7 @@ const AdminEventsPage: React.FC = () => {
         maxAttendees: 50
       },
       registrationFee: 0,
-      status: 'active',
+      status: 'published',
       images: [],
       tags: [],
       requirements: [],
@@ -231,7 +336,10 @@ const AdminEventsPage: React.FC = () => {
       status: event.status,
       images: event.images,
       tags: event.tags,
-      requirements: event.requirements,
+      // Convert string requirements back to array for form editing
+      requirements: Array.isArray(event.requirements) 
+        ? event.requirements 
+        : (event.requirements ? (event.requirements as string).split(', ').map((req: string) => req.trim()) : []),
       contactInfo: event.contactInfo
     });
     setShowCreateForm(true);
@@ -261,7 +369,10 @@ const AdminEventsPage: React.FC = () => {
       active: 'bg-green-100 text-green-800',
       inactive: 'bg-red-100 text-red-800',
       cancelled: 'bg-gray-100 text-gray-800',
-      completed: 'bg-blue-100 text-blue-800'
+      completed: 'bg-blue-100 text-blue-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      rejected: 'bg-red-100 text-red-800',
+      suspended: 'bg-orange-100 text-orange-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -299,6 +410,38 @@ const AdminEventsPage: React.FC = () => {
               Create Event
             </button>
           </div>
+          
+          {/* Tab Navigation */}
+          <div className="mt-6 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'all'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                All Events
+              </button>
+              <button
+                onClick={() => setActiveTab('pending')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
+                  activeTab === 'pending'
+                    ? 'border-yellow-500 text-yellow-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Pending Approval
+                {pendingEvents.length > 0 && (
+                  <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                    {pendingEvents.length}
+                  </span>
+                )}
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
@@ -324,6 +467,9 @@ const AdminEventsPage: React.FC = () => {
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="pending">Pending Approval</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
               <option value="cancelled">Cancelled</option>
               <option value="completed">Completed</option>
             </select>
@@ -380,7 +526,7 @@ const AdminEventsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {events.map((event) => (
+                  {(activeTab === 'pending' ? pendingEvents : events).map((event) => (
                     <tr key={event._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div>
@@ -428,20 +574,54 @@ const AdminEventsPage: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => startEdit(event)}
-                            className="text-green-600 hover:text-green-800"
-                            title="Edit Event"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(event._id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete Event"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          
+                          {activeTab === 'pending' && event.status === 'pending' ? (
+                            <>
+                              <button
+                                onClick={() => openApprovalModal(event, 'approve')}
+                                className="text-green-600 hover:text-green-800"
+                                title="Approve Event"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => openApprovalModal(event, 'reject')}
+                                className="text-red-600 hover:text-red-800"
+                                title="Reject Event"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => startEdit(event)}
+                                className="text-green-600 hover:text-green-800"
+                                title="Edit Event"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {event.status === 'active' && (
+                                <button
+                                  onClick={() => {
+                                    const reason = prompt('Enter suspension reason:');
+                                    if (reason) handleSuspendEvent(event._id, reason);
+                                  }}
+                                  className="text-orange-600 hover:text-orange-800"
+                                  title="Suspend Event"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteEvent(event._id)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Delete Event"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -477,6 +657,97 @@ const AdminEventsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Approval Modal */}
+      {showApprovalModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {approvalAction === 'approve' ? 'Approve Event' : 'Reject Event'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowApprovalModal(false);
+                    resetApprovalModal();
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="font-medium text-gray-900 mb-2">{selectedEvent.title}</h3>
+                <p className="text-sm text-gray-600 mb-2">{selectedEvent.description}</p>
+                <div className="text-sm text-gray-500">
+                  <p>Organizer: {selectedEvent.organizer.name}</p>
+                  <p>Date: {formatDate(selectedEvent.dateTime.startDate)}</p>
+                  <p>Location: {selectedEvent.location.city}</p>
+                </div>
+              </div>
+
+              {approvalAction === 'reject' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rejection Reason *
+                  </label>
+                  <select
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select a reason</option>
+                    <option value="inappropriate_content">Inappropriate Content</option>
+                    <option value="incomplete_information">Incomplete Information</option>
+                    <option value="policy_violation">Policy Violation</option>
+                    <option value="duplicate_event">Duplicate Event</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {approvalAction === 'approve' ? 'Approval Notes (Optional)' : 'Additional Notes (Optional)'}
+                </label>
+                <textarea
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder={`Add any ${approvalAction === 'approve' ? 'approval' : 'rejection'} notes...`}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowApprovalModal(false);
+                    resetApprovalModal();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApprovalSubmit}
+                  disabled={approvalAction === 'reject' && !rejectionReason}
+                  className={`px-4 py-2 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                    approvalAction === 'approve'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {approvalAction === 'approve' ? 'Approve Event' : 'Reject Event'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Event Modal */}
       {showCreateForm && (
@@ -573,6 +844,7 @@ const AdminEventsPage: React.FC = () => {
                     <input
                       type="date"
                       required
+                      min={new Date().toISOString().split('T')[0]}
                       value={formData.dateTime.startDate}
                       onChange={(e) => setFormData({
                         ...formData,
@@ -586,6 +858,7 @@ const AdminEventsPage: React.FC = () => {
                     <input
                       type="date"
                       required
+                      min={formData.dateTime.startDate || new Date().toISOString().split('T')[0]}
                       value={formData.dateTime.endDate}
                       onChange={(e) => setFormData({
                         ...formData,
@@ -658,8 +931,10 @@ const AdminEventsPage: React.FC = () => {
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
                   </div>

@@ -41,7 +41,7 @@ const ProductSchema = new mongoose.Schema({
   },
   images: {
     type: [String],
-    default: ['no-photo.jpg']
+    default: ['no-photo.svg']
   },
   isSeasonal: {
     type: Boolean,
@@ -94,6 +94,47 @@ const ProductSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Inventory management
+  reservations: [{
+    reservationId: {
+      type: String,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  lowStockThreshold: {
+    type: Number,
+    default: 10
+  },
+  stockStatus: {
+    type: String,
+    enum: ['in_stock', 'low_stock', 'out_of_stock'],
+    default: 'in_stock'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
+  },
+  suspensionReason: {
+    type: String
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -124,6 +165,42 @@ ProductSchema.statics.getAverageRating = async function(productId) {
   } catch (err) {
     console.error(err);
   }
+};
+
+// Update stock status based on quantity
+ProductSchema.pre('save', function(next) {
+  if (this.quantity === 0) {
+    this.stockStatus = 'out_of_stock';
+  } else if (this.quantity <= this.lowStockThreshold) {
+    this.stockStatus = 'low_stock';
+  } else {
+    this.stockStatus = 'in_stock';
+  }
+  next();
+});
+
+// Instance method to check available stock (excluding reservations)
+ProductSchema.methods.getAvailableStock = function() {
+  const reservedQuantity = this.reservations
+    .filter(r => r.expiresAt > new Date())
+    .reduce((sum, r) => sum + r.quantity, 0);
+  return Math.max(0, this.quantity - reservedQuantity);
+};
+
+// Instance method to clean expired reservations
+ProductSchema.methods.cleanExpiredReservations = async function() {
+  const now = new Date();
+  const expiredReservations = this.reservations.filter(r => r.expiresAt <= now);
+  const validReservations = this.reservations.filter(r => r.expiresAt > now);
+  
+  if (expiredReservations.length > 0) {
+    const stockToRestore = expiredReservations.reduce((sum, r) => sum + r.quantity, 0);
+    this.quantity += stockToRestore;
+    this.reservations = validReservations;
+    await this.save();
+    return stockToRestore;
+  }
+  return 0;
 };
 
 // Call getAverageRating after save

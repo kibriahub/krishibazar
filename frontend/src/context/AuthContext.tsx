@@ -25,6 +25,8 @@ type AuthContextType = {
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (profileData: any) => Promise<void>;
+  forgotPassword: (email: string, city: string) => Promise<{ message: string; token: string }>;
+  resetPassword: (token: string, newPassword: string) => Promise<{ message: string }>;
   clearError: () => void;
 };
 
@@ -108,6 +110,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Forgot password
+  const forgotPassword = async (email: string, city: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.forgotPassword({ email, city });
+      return response;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to process forgot password request';
+      setError(errorMessage);
+      console.error('Forgot password error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (token: string, newPassword: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.resetPassword(token, { password: newPassword });
+      return response;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to reset password';
+      setError(errorMessage);
+      console.error('Reset password error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load user on initial render if token exists
   useEffect(() => {
     const loadUser = async () => {
@@ -142,6 +178,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         updateProfile,
+        forgotPassword,
+        resetPassword,
         clearError,
       }}
     >
